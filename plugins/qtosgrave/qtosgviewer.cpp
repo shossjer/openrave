@@ -20,6 +20,62 @@
 #include <osg/ArgumentParser>
 #include "osgviewerwidget.h"
 
+struct StringView
+{
+    const char* ptr;
+    size_t len;
+
+    explicit StringView(const char* ptr_, size_t len_)
+        : ptr(ptr_)
+        , len(len_)
+    {}
+    template <size_t N>
+    explicit StringView(const char (& string)[N])
+        : StringView(string, N - 1)
+    {}
+};
+
+static StringView GetKeyName(int key)
+{
+    static const char asciiTable[128] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+        0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+        0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+        0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+        0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+    };
+
+    if (key != 0) {
+        if (static_cast<unsigned int>(key) < 128) {
+            return StringView(asciiTable + key, 1);
+        }
+        else {
+            switch (key) {
+            case osgGA::GUIEventAdapter::KEY_BackSpace: return StringView("backspace");
+            case osgGA::GUIEventAdapter::KEY_Return: return StringView("enter");
+
+            case osgGA::GUIEventAdapter::KEY_Home: return StringView("home");
+            case osgGA::GUIEventAdapter::KEY_Page_Up: return StringView("pgup");
+            case osgGA::GUIEventAdapter::KEY_Page_Down: return StringView("pgdn");
+            case osgGA::GUIEventAdapter::KEY_End: return StringView("end");
+            case osgGA::GUIEventAdapter::KEY_Delete: return StringView("del");
+
+            case osgGA::GUIEventAdapter::KEY_Left: return StringView("left");
+            case osgGA::GUIEventAdapter::KEY_Up: return StringView("up");
+            case osgGA::GUIEventAdapter::KEY_Right: return StringView("right");
+            case osgGA::GUIEventAdapter::KEY_Down: return StringView("down");
+            }
+        }
+    }
+
+    RAVELOG_VERBOSE_FORMAT("unknown key press %d\n", key);
+
+    return StringView("");
+}
+
 namespace qtosgrave {
 
 #define ITEM_DELETER boost::bind(DeleteItemCallbackSafe,weak_viewer(),_1)
@@ -71,6 +127,26 @@ protected:
     boost::weak_ptr<QtOSGViewer> _pweakviewer;
 };
 typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
+
+class KeyPressCallbackData : public UserData
+{
+public:
+    KeyPressCallbackData(const ViewerBase::KeyPressCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~KeyPressCallbackData() {
+        boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            std::lock_guard<std::mutex> lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredKeyPressCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::KeyPressCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtOSGViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<KeyPressCallbackData> KeyPressCallbackDataPtr;
 
 QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
 {
@@ -325,6 +401,28 @@ bool QtOSGViewer::_HandleOSGKeyDown(int key)
 //            }
         }
         break;
+    }
+
+    std::list<UserDataWeakPtr> listRegisteredKeyPressCallbacks;
+    {
+        std::lock_guard<std::mutex> lock(_mutexCallbacks);
+        listRegisteredKeyPressCallbacks = _listRegisteredKeyPressCallbacks;
+    }
+    if (!listRegisteredKeyPressCallbacks.empty()) {
+        StringView keyname = GetKeyName(key);
+        if (keyname.len != 0) {
+            FOREACH(it, listRegisteredKeyPressCallbacks) {
+                KeyPressCallbackDataPtr pdata = boost::dynamic_pointer_cast<KeyPressCallbackData>(it->lock());
+                if( !!pdata ) {
+                    try {
+                        pdata->_callback(keyname.ptr, keyname.len);
+                    }
+                    catch(const std::exception& e) {
+                        RAVELOG_ERROR(str(boost::format("Key Press Callback Failed with error %s") % e.what()));
+                    }
+                }
+            }
+        }
     }
 
     return false;
@@ -2337,6 +2435,13 @@ UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallback
 {
     ViewerThreadCallbackDataPtr pdata(new ViewerThreadCallbackData(fncallback,shared_viewer()));
     pdata->_iterator = _listRegisteredViewerThreadCallbacks.insert(_listRegisteredViewerThreadCallbacks.end(),pdata);
+    return pdata;
+}
+
+UserDataPtr QtOSGViewer::RegisterKeyPressCallback(const KeyPressCallbackFn& fncallback)
+{
+    KeyPressCallbackDataPtr pdata(new KeyPressCallbackData(fncallback, shared_viewer()));
+    pdata->_iterator = _listRegisteredKeyPressCallbacks.insert(_listRegisteredKeyPressCallbacks.end(), pdata);
     return pdata;
 }
 

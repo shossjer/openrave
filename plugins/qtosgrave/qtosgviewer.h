@@ -135,6 +135,7 @@ public:
 
     virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
+    virtual UserDataPtr RegisterKeyPressCallback(const KeyPressCallbackFn& fncallback);
 
     /// \brief Locks environment
     boost::shared_ptr<EnvironmentLock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
@@ -442,6 +443,7 @@ public:
     std::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredKeyPressCallbacks;
     //@}
 
     //@{ qt menus and dialog boxes
@@ -549,6 +551,7 @@ public:
 
     friend class ItemSelectionCallbackData;
     friend class ViewerThreadCallbackData;
+    friend class KeyPressCallbackData;
     friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);
 };
 

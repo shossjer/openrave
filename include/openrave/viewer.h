@@ -144,6 +144,15 @@ public:
     /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief callback function for key presses
+    typedef boost::function<bool (const char* name, size_t size)> KeyPressCallbackFn;
+
+    /// \brief registers a function with the viewer that gets called for every key press event
+    ///
+    /// The environment will not be locked when the thread is called
+    /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
+    virtual UserDataPtr RegisterKeyPressCallback(const KeyPressCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
+
 
     /// \brief controls whether the viewer synchronizes with the newest environment automatically
     virtual void SetEnvironmentSync(bool bUpdate) OPENRAVE_DUMMY_IMPLEMENTATION;

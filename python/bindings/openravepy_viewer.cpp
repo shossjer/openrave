@@ -137,6 +137,33 @@ protected:
         return true;
     }
 
+    static bool _KeyPressCallback(object fncallback, pybind11::args fndata, PyEnvironmentBasePtr pyenv, const char* keyname, size_t keysize)
+    {
+        object res;
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        try {
+            res = fncallback(pybind11::str(keyname, keysize), *fndata);
+        }
+        catch(...) {
+            PyErr_Print();
+            RAVELOG_ERROR("exception occured in python viewer callback:\n");
+        }
+        PyGILState_Release(gstate);
+        extract_<bool> xb(res);
+        if( xb.check() ) {
+            return (bool)xb;
+        }
+        extract_<int> xi(res);
+        if( xi.check() ) {
+            return (int)xi;
+        }
+        extract_<double> xd(res);
+        if( xd.check() ) {
+            return (double)xd>0;
+        }
+        return true;
+    }
+
     void _ThreadCallback()
     {
         if( openravepy::s_nInterruptCount > 0 ) {
@@ -283,6 +310,18 @@ public:
         return openravepy::GetUserData(p);
     }
 
+    object RegisterKeyPressCallback(object fncallback, pybind11::args fndata)
+    {
+        if( !fncallback ) {
+            throw openrave_exception(_("callback not specified"));
+        }
+        UserDataPtr p = _pviewer->RegisterKeyPressCallback(boost::bind(&PyViewerBase::_KeyPressCallback, fncallback, fndata, _pyenv, _1, _2));
+        if( !p ) {
+            throw openrave_exception(_("no registration callback returned"));
+        }
+        return openravepy::GetUserData(p);
+    }
+
     void EnvironmentSync() {
         return _pviewer->EnvironmentSync();
     }
@@ -386,6 +425,7 @@ void init_openravepy_viewer()
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
                        .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("properties", "callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
+                       .def("RegisterKeyPressCallback", &PyViewerBase::RegisterKeyPressCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterKeyPressCallback))
                        .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
                        .def("SetCamera",setcamera1, PY_ARGS("transform") DOXY_FN(ViewerBase,SetCamera))
                        .def("SetCamera",setcamera2, PY_ARGS("transform","focalDistance") DOXY_FN(ViewerBase,SetCamera))
