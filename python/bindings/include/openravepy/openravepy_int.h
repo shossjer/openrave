@@ -480,6 +480,9 @@ public:
     void SetShow(bool bshow) {
         _handle->SetShow(bshow);
     }
+    void ToggleShow() {
+        _handle->ToggleShow();
+    }
     void Close()
     {
         _handle.reset();

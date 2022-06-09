@@ -179,6 +179,13 @@ public:
             }
         }
 
+        void ToggleShow()
+        {
+            FOREACH(it,listhandles) {
+                (*it)->ToggleShow();
+            }
+        }
+
         void Add(OpenRAVE::GraphHandlePtr phandle) {
             if( !!phandle) {
                 listhandles.push_back(phandle);

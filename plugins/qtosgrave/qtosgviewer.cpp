@@ -2424,6 +2424,19 @@ void QtOSGViewer::_SetGraphShow(OSGSwitchPtr handle, bool bShow)
     }
 }
 
+void QtOSGViewer::_ToggleGraphShow(OSGSwitchPtr handle)
+{
+    const auto& valueList = handle->getValueList();
+
+    if (!valueList.empty()) {
+        if (valueList.front()) {
+            handle->setAllChildrenOff();
+        } else {
+            handle->setAllChildrenOn();
+        }
+    }
+}
+
 UserDataPtr QtOSGViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)
 {
     ItemSelectionCallbackDataPtr pdata(new ItemSelectionCallbackData(fncallback,shared_viewer()));

@@ -41,6 +41,8 @@ public:
     virtual void SetTransform(const RaveTransform<float>& t) OPENRAVE_DUMMY_IMPLEMENTATION;
     /// \brief Shows or hides the plot without destroying its resources. <b>[multi-thread safe]</b>
     virtual void SetShow(bool bshow) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \brief Toggles the visibility of the plot without destroying its resources. <b>[multi-thread safe]</b>
+    virtual void ToggleShow() OPENRAVE_DUMMY_IMPLEMENTATION;
 };
 
 typedef boost::shared_ptr<GraphHandle> GraphHandlePtr;

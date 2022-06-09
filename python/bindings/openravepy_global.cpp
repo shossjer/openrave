@@ -1557,6 +1557,7 @@ void init_openravepy_global()
 #endif
     .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
     .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
+    .def("ToggleShow",&PyGraphHandle::ToggleShow,DOXY_FN(GraphHandle,ToggleShow))
     .def("Close",&PyGraphHandle::Close,DOXY_FN(GraphHandle,Close))
     ;
 

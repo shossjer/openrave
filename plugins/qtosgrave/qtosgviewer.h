@@ -291,6 +291,14 @@ public:
             }
         }
 
+        virtual void ToggleShow()
+        {
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
+            if(!!viewer) {
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_ToggleGraphShow, viewer, _handle), ViewerCommandPriority::VERY_HIGH); // _handle is copied, so it will maintain the reference
+            }
+        }
+
         OSGSwitchPtr _handle;
         QtOSGViewerWeakPtr _wviewer;
     };
@@ -325,6 +333,7 @@ public:
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
     virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
     virtual void _SetGraphShow(OSGSwitchPtr handle, bool bShow);
+    virtual void _ToggleGraphShow(OSGSwitchPtr handle);
 
     virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute, bool bUsingTransparency=false);
     virtual void _DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency);

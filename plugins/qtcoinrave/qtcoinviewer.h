@@ -282,6 +282,11 @@ public:
             }
         }
 
+        virtual void ToggleShow()
+        {
+            // TODO
+        }
+
         SoSwitch* _handle;
         boost::weak_ptr<QtCoinViewer> _wviewer;
     };
